@@ -98,8 +98,56 @@ def top_category_by_metric(df, category_col, metric_col):
     top_total = totals.loc[top_category]
     return top_category, top_total
 
+
+def identify_text_duplicates(series):
+    duplicates_map = {}
+    for val in series.dropna().unique():
+        val_str = str(val).strip()
+        lower_val = val_str.lower()
+        if lower_val not in duplicates_map:
+            duplicates_map[lower_val] = []
+        duplicates_map[lower_val].append(val_str)
+    return {k: v for k, v in duplicates_map.items() if len(v) > 1}
+
+
+def standardize_text_column(series):
+    # Trim all values
+    trimmed = series.astype(str).str.strip()
+    
+    # Identify case-insensitive duplicates
+    duplicates_map = identify_text_duplicates(trimmed)
+    
+    # Build standardization mapping
+    standardization_map = {}
+    
+    # For each duplicate group, find the most frequent variant and convert to Title Case
+    for lower_val, variants in duplicates_map.items():
+        variant_counts = trimmed[trimmed.str.lower() == lower_val].value_counts()
+        if len(variant_counts) > 0:
+            most_frequent = variant_counts.index[0]
+        else:
+            # Fallback to first variant if no counts
+            most_frequent = variants[0]
+        # Convert the most frequent variant to Title Case for consistency
+        standardization_map[lower_val] = most_frequent.title()
+    
+    # Apply standardization
+    result = series.astype(str).str.strip()
+    
+    # Replace all variants with their standardized (Title Case) form
+    for lower_val, standard_val in standardization_map.items():
+        mask = result.str.lower() == lower_val
+        result[mask] = standard_val
+    
+    # Apply Title Case to any remaining values not in the mapping
+    for idx in result.index:
+        val = result[idx]
+        if pd.notna(val) and str(val).lower() not in standardization_map:
+            result[idx] = str(val).title()
+    
+    return result, standardization_map
+
 with st.container():
-    # Name
     st.markdown('<div class="hero">', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
@@ -123,13 +171,12 @@ with st.container():
                 try:
                     df = pd.read_csv(uploaded_file)
                 except UnicodeDecodeError:
-                    # If UTF-8 fails, auto-detect the file's encoding
-                    uploaded_file.seek(0)  # Reset file pointer to beginning
-                    raw_data = uploaded_file.read()  # Read raw bytes
-                    detected = chardet.detect(raw_data)  # Detect encoding from byte pattern
-                    encoding = detected['encoding']  # Extract the detected encoding
+                    # If UTF-8 fails, auto-detect the file's encoding 
+                    uploaded_file.seek(0)
+                    raw_data = uploaded_file.read() 
+                    detected = chardet.detect(raw_data) 
+                    encoding = detected['encoding']
                     
-                    # Reset file pointer and read with detected encoding
                     uploaded_file.seek(0)
                     df = pd.read_csv(uploaded_file, encoding=encoding)
             else:
@@ -161,15 +208,14 @@ with st.container():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ADDED: Auto-detect column roles and store them in session state so other
+# Auto-detect column roles and store them in session state so other
 # parts of the app (like highlight_changed_cells) can reference them too
 if df is not None:
     if 'col_roles' not in st.session_state or st.session_state.get('last_file') != uploaded_file.name:
         st.session_state['col_roles'] = detect_column_roles(df)
         st.session_state['last_file'] = uploaded_file.name
 
-    # ADDED: Let the user review and correct the auto-detected roles before cleaning.
-    # This is the key to making the app work for ANY file — the user has final say.
+    # Option to confirm or adjust detected roles before cleaning
     st.subheader("🔍 Confirm Column Roles")
     st.caption("Roles below are auto-detected. Adjust if needed before cleaning. 'Skip' will exclude the column from cleaning operations.")
 
@@ -187,11 +233,9 @@ if df is not None:
                 key=f"role_{col}"
             )
 
-    # ADDED: Save the user-confirmed roles back to session state
     st.session_state['col_roles'] = updated_roles
 
-    # ADDED: Let the user choose which numeric columns should have negatives fixed.
-    # We can't assume ALL numeric columns need this (e.g. a temperature column is fine negative).
+    # Option to choose which numeric columns should have negative values fixed (converted to positive)
     numeric_cols = [c for c, r in updated_roles.items() if r == "numeric"]
     fix_negatives_cols = []
     if numeric_cols:
@@ -221,6 +265,12 @@ if df is not None:
 
                 if col in fix_negatives_cols:
                     df_cleaned[col] = df_cleaned[col].abs()
+            # Text standardization
+            elif role == "text":
+                df_cleaned[col], text_mappings = standardize_text_column(df_cleaned[col])
+                if 'text_standardization_mappings' not in st.session_state:
+                    st.session_state['text_standardization_mappings'] = {}
+                st.session_state['text_standardization_mappings'][col] = text_mappings
 
         # Persist cleaned data and metadata so visualizations survive user interactions
         st.session_state['df_cleaned'] = df_cleaned
@@ -281,7 +331,6 @@ if df is not None:
             cat_cols = [c for c, r in updated_roles.items() if r == "text"]
             analysis_num_cols = [c for c in num_cols if not is_identifier_column(c, df_cleaned[c])]
 
-            # Ensure a stable session_state key
             sel_key = f"selected_num_{uploaded_file.name}"
             if analysis_num_cols and (sel_key not in st.session_state or st.session_state.get(sel_key) not in analysis_num_cols):
                 st.session_state[sel_key] = analysis_num_cols[0]
@@ -295,14 +344,12 @@ if df is not None:
                 trend_col, bar_col = st.columns(2)
 
                 with trend_col:
-                    with st.container(border=True): # Card Look
+                    with st.container(border=True):
                         if date_cols:
                             date_choice = date_cols[0]
                             df_trend = df_cleaned.sort_values(by=date_choice)
-                            # Area chart for the professional "Stock" look
                             fig_line = px.area(df_trend, x=date_choice, y=selected_num, title=f"📈 {selected_num} Trend over Time")
                             
-                            # Styling: Neon Cyan and Transparent Background
                             fig_line.update_traces(line_color='#00d4ff', fillcolor='rgba(0, 212, 255, 0.1)')
                             fig_line.update_layout(
                                 plot_bgcolor='rgba(0,0,0,0)',
@@ -334,7 +381,6 @@ if df is not None:
                 with bottom_col1:
                     with st.container(border=True):
                         if cat_cols:
-                            # Donut chart for a modern feel
                             fig_pie = px.pie(df_cleaned, names=cat_cols[0], hole=0.4, title=f"Distribution of {cat_cols[0]}")
                             fig_pie.update_layout(
                                 paper_bgcolor='rgba(0,0,0,0)',
