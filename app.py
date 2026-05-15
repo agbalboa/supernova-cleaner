@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import io
+import chardet  # For auto-detecting file encoding
 
 # Layout
 st.set_page_config(page_title="Supernova Cleaner", layout="wide")
@@ -118,7 +119,19 @@ with st.container():
         # Show uploaded file
         if uploaded_file is not None:
             if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
+                # Try reading with UTF-8 first (most common encoding)
+                try:
+                    df = pd.read_csv(uploaded_file)
+                except UnicodeDecodeError:
+                    # If UTF-8 fails, auto-detect the file's encoding
+                    uploaded_file.seek(0)  # Reset file pointer to beginning
+                    raw_data = uploaded_file.read()  # Read raw bytes
+                    detected = chardet.detect(raw_data)  # Detect encoding from byte pattern
+                    encoding = detected['encoding']  # Extract the detected encoding
+                    
+                    # Reset file pointer and read with detected encoding
+                    uploaded_file.seek(0)
+                    df = pd.read_csv(uploaded_file, encoding=encoding)
             else:
                 df = pd.read_excel(uploaded_file)
 
