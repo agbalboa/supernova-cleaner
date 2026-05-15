@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Ink:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+.stApp {
+    background-color: black;
+}
+
+header[data-testid="stHeader"] {
+    background-color: black !important;
+    border-bottom: 1px solid #333;
+    /* Optional: adds a subtle line divider */
+}
+
+/* This targets the buttons/text inside that header to make sure they stay visible */
+header[data-testid="stHeader"] * {
+    color: white !important;
+}
+
+/* st.title */
+h1 {
+    font-family: "Bitcount Ink", sans-serif !important;
+    font-weight: 400;
+    font-optical-sizing: auto;
+    font-style: normal;
+    font-size: 5rem !important;
+    margin-bottom: 0rem !important;
+    padding-bottom: 0rem !important;
+}
+
+h3 {
+    font-family: "Chakra Petch", sans-serif !important;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h3.hero-subheader {
+    font-family: "Chakra Petch", sans-serif !important;
+    font-weight: 400;
+    font-style: normal;
+    margin-top: 0rem !important;
+    padding-top: 0rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Targets the label element inside the file uploader widget */
+[data-testid="stFileUploader"] label {
+    display: none !important;
+}
+
+/* Change the background of the actual drag-and-drop zone */
+[data-testid="stFileUploaderDropzone"] {
+    background-color: #121116 !important;
+    border: 1px solid #916491 !important;
+    /* We use the parent's border instead */
+}
+
+/* 1. Target the actual moving line element */
+[data-baseweb="tab-highlight"] {
+    background-color: #916491 !important;
+    /* Your desired line color */
+    height: 2px !important;
+    /* Optional: makes it easier to see if it worked */
+}
+
+[data-baseweb="tag"] {
+    background-color: #916491 !important;
+}
+
+[data-baseweb="tag"]>span {
+    background-color: transparent !important;
+}
+
+div[data-baseweb="select"]>div:focus-within {
+    border-color: #916491 !important;
+    box-shadow: 0 0 0 1px #916491 !important;
+    /* This creates the "outline" glow */
+}
+
+/* 2. Target the selected tab text again just to be sure */
+button[aria-selected="true"] p {
+    color: #916491 !important;
+}
+
+/* Add this to your existing tab button code */
+button[data-baseweb="tab"] p {
+    transition: color 0.3s ease-in-out;
+}
+
+/* Targets the text inside ANY tab when you hover over it */
+button[data-baseweb="tab"]:hover p {
+    color: #916491 !important;
+    /* Changes text to your neon color on hover */
+    cursor: pointer;
+}
+
+/* Optional: If you want the icon (like the folder or chart) to change color too */
+button[data-baseweb="tab"]:hover span {
+    color: #916491 !important;
+}
+
+div[data-baseweb="select"]>div:focus-within {
+    border-color: #916491 !important;
+}
